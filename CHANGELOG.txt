@@ -1,4 +1,9 @@
-﻿26.4.19.1
+﻿26.4.19.2
+=========
+ + Restored support for Windows 10.
+ + Use standard rounding for integer representations of refresh rates.
+
+26.4.19.1
 =========
  + Changed how Maximum VRR Range is calculated and reported in order to deal
      with EDID 1.3 limitations on displays faster than 255 Hz and displays

@@ -39,8 +39,6 @@
 #include <SpecialK/nvapi.h>
 #include <SpecialK/adl.h>
 
-#pragma comment (lib, "DComp.lib")
-
 volatile ULONG64 SK_RenderBackend::frames_drawn = 0ULL;
 
 double
@@ -3661,9 +3659,22 @@ SK_RenderBackend_V2::setDevice (IUnknown *pDevice)
                        pDXGIDevice (pDevice);
           if (         pDXGIDevice != nullptr)
           {
-            DCompositionCreateDevice (pDXGIDevice,
-                    __uuidof (IDCompositionDevice),
-                (void **)&d3d11.composition.p);
+            static HMODULE dcomp_dll =
+              SK_LoadLibraryW (L"dcomp.dll");
+
+            using DCompositionCreateDevice_pfn =
+              HRESULT (WINAPI *)(IDXGIDevice*, REFIID, void**);
+
+            static DCompositionCreateDevice_pfn
+                  _DCompositionCreateDevice =
+                  (DCompositionCreateDevice_pfn)SK_GetProcAddress (dcomp_dll,
+                  "DCompositionCreateDevice");
+
+            if (_DCompositionCreateDevice != nullptr) {
+                _DCompositionCreateDevice (pDXGIDevice,
+                         __uuidof (IDCompositionDevice),
+                     (void **)&d3d11.composition.p);
+            }
           }
         }
       }
@@ -6507,12 +6518,33 @@ SK_RenderBackend_V2::output_s::setSDRWhiteLevel (float fNits)
 
 
 void
+SK_DComp_SetupCompositorClock (void)
+{
+  if (config.render.framerate.boost_composite_clock)
+  {
+    static HMODULE dcomp_dll =
+      SK_LoadLibraryW (L"dcomp.dll");
+  
+    using  DCompositionBoostCompositorClock_pfn = HRESULT (WINAPI *)(BOOL);
+    static DCompositionBoostCompositorClock_pfn
+          _DCompositionBoostCompositorClock =
+          (DCompositionBoostCompositorClock_pfn)SK_GetProcAddress (dcomp_dll,
+          "DCompositionBoostCompositorClock");
+  
+    if (_DCompositionBoostCompositorClock != nullptr)
+        _DCompositionBoostCompositorClock (TRUE);
+  }
+}
+
+void
 SK_Render_CountVBlanks ()
 {
   SK_PROFILE_SCOPED_TASK (SK_Render_CountVBlanks)
 
   static HANDLE hVRREvent =
     SK_CreateEvent (nullptr, FALSE, FALSE, nullptr);
+
+  SK_RunOnce (SK_DComp_SetupCompositorClock ());
 
   static HANDLE hVBlankThread =
     SK_Thread_CreateEx ([](LPVOID) -> DWORD
@@ -6523,18 +6555,6 @@ SK_Render_CountVBlanks ()
       HANDLE                            vrr_events [] = { __SK_DLL_TeardownEvent, hVRREvent };
       while (WaitForMultipleObjects (2, vrr_events, FALSE, 500UL) != WAIT_OBJECT_0)
       {
-        if (config.render.framerate.boost_composite_clock)
-        {
-          using  DCompositionBoostCompositorClock_pfn = HRESULT (WINAPI *)(BOOL);
-          static DCompositionBoostCompositorClock_pfn
-                _DCompositionBoostCompositorClock = (DCompositionBoostCompositorClock_pfn)
-              SK_GetProcAddress (SK_LoadLibraryW (L"dcomp.dll"),
-                "DCompositionBoostCompositorClock");
-
-          if (_DCompositionBoostCompositorClock != nullptr)
-              _DCompositionBoostCompositorClock (TRUE);
-        }
-
         DXGI_FRAME_STATISTICS
              frameStats = {};
 

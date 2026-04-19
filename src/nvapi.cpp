@@ -1329,35 +1329,63 @@ SK_RenderBackend_V2::output_s::statistics_s::vblank_history_s::resetStats (void)
 void
 SK_DComp_UpdateStats (const SK_RenderBackend_V2& rb) noexcept
 {
+  std::ignore = rb;
+#if 0
   if (rb.d3d11.composition != nullptr)
   {   rb.d3d11.composition->Commit ();
+    static HMODULE dcomp_dll =
+      SK_LoadLibraryW (L"dcomp.dll");
 
-    COMPOSITION_FRAME_ID                                     frameId = 0;
-    DCompositionGetFrameId (COMPOSITION_FRAME_ID_COMPLETED, &frameId);
+    using DCompositionGetFrameId_pfn =
+      HRESULT (WINAPI *)(COMPOSITION_FRAME_ID_TYPE,
+                         COMPOSITION_FRAME_ID*);
 
-    UINT                                 targetCount =  0;
-    COMPOSITION_FRAME_STATS              frameStats  = { };
-    DCompositionGetStatistics (frameId, &frameStats, 0, nullptr, &targetCount);
+    static DCompositionGetFrameId_pfn
+          _DCompositionGetFrameId =
+          (DCompositionGetFrameId_pfn)SK_GetProcAddress (dcomp_dll,
+          "DCompositionGetFrameId");
 
-#if 0
-    float fLastFrameRate =
-                  1000.0f /
-      static_cast <float> (
-        static_cast <double> (frameStats.framePeriod) /
-        static_cast <double> (SK_QpcTicksPerMs)
-      );
+    using DCompositionGetStatistics_pfn =
+      HRESULT (WINAPI *)(COMPOSITION_FRAME_ID,
+                         COMPOSITION_FRAME_STATS*,
+                   UINT, COMPOSITION_TARGET_ID*,
+                   UINT*);
 
-    DCOMPOSITION_FRAME_STATISTICS                             frameStatistics = {};
-    if (SUCCEEDED (rb.d3d11.composition->GetFrameStatistics (&frameStatistics)))
+    static DCompositionGetStatistics_pfn
+          _DCompositionGetStatistics =
+          (DCompositionGetStatistics_pfn)SK_GetProcAddress (dcomp_dll,
+          "DCompositionGetStatistics");
+
+    if (_DCompositionGetStatistics != nullptr &&
+        _DCompositionGetFrameId    != nullptr)
     {
-      return
+      COMPOSITION_FRAME_ID                                      frameId = 0;
+      _DCompositionGetFrameId (COMPOSITION_FRAME_ID_COMPLETED, &frameId);
+
+      UINT                                  targetCount =  0;
+      COMPOSITION_FRAME_STATS               frameStats  = { };
+      _DCompositionGetStatistics (frameId, &frameStats, 0, nullptr,
+                                           &targetCount);
+
+      float fLastFrameRate =
+                    1000.0f /
         static_cast <float> (
-          static_cast <double> (frameStatistics.currentCompositionRate.Numerator) /
-          static_cast <double> (frameStatistics.currentCompositionRate.Denominator)
+          static_cast <double> (frameStats.framePeriod) /
+          static_cast <double> (SK_QpcTicksPerMs)
         );
+
+      DCOMPOSITION_FRAME_STATISTICS                             frameStatistics = {};
+      if (SUCCEEDED (rb.d3d11.composition->GetFrameStatistics (&frameStatistics)))
+      {
+        return
+          static_cast <float> (
+            static_cast <double> (frameStatistics.currentCompositionRate.Numerator) /
+            static_cast <double> (frameStatistics.currentCompositionRate.Denominator)
+          );
+      }
     }
-#endif
   }
+#endif
 }
 
 float
