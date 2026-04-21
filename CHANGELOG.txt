@@ -1,4 +1,8 @@
-﻿26.4.19.2
+﻿26.4.20
+=======
+ + Fixed SK's Reflex Sleep checking native frame IDs in non-native Reflex games
+
+26.4.19.2
 =========
  + Restored support for Windows 10.
  + Use standard rounding for integer representations of refresh rates.

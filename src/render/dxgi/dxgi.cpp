@@ -2574,13 +2574,13 @@ SK_StreamlinePresent ( IDXGISwapChain *This,
       NvAPI_D3D_Sleep_Detour (__in IUnknown *pDev);
       NvAPI_D3D_Sleep_Detour (rb.device.p);
 
-      extern NvU64 SK_Reflex_LastNativeFramePresented;
+      extern volatile NvU64 SK_Reflex_LastNativeFramePresented;
 
       NV_LATENCY_MARKER_PARAMS
       markerParams            = {                          };
       markerParams.version    = NV_LATENCY_MARKER_PARAMS_VER;
       markerParams.markerType = SIMULATION_START;
-      markerParams.frameID    = SK_Reflex_LastNativeFramePresented+1;
+      markerParams.frameID    = ReadULong64Acquire (&SK_Reflex_LastNativeFramePresented)+1;
 
       NvAPI_D3D_SetLatencyMarker_Detour (rb.device.p, &markerParams);
                                                        markerParams.markerType = INPUT_SAMPLE;

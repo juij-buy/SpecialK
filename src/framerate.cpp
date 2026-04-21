@@ -4658,7 +4658,7 @@ bool sk_config_t::render_s::framerate_s::streamline_s::wantNativePacing (void)
   return enable_native_limit;
 }                               
 
-extern NvU32 SK_Reflex_LastNativeSleepTime;
+extern volatile NvU32 SK_Reflex_LastNativeSleepTime;
 
 void
 SK::Framerate::Tick ( bool          wait,
@@ -4689,7 +4689,7 @@ SK::Framerate::Tick ( bool          wait,
   if (wait)
     pLimiter->wait ();
 
-  if (config.fps.getTimingMethod () == SK_FrametimeMeasures_LimiterPacing && (!__SK_IsDLSSGActive || !config.render.framerate.streamline.wantNativePacing()) && (config.render.framerate.enforcement_policy != 2 || SK_Reflex_LastNativeSleepTime == 0 || SK_Reflex_LastNativeSleepTime < SK_timeGetTime() - 250))
+  if (config.fps.getTimingMethod () == SK_FrametimeMeasures_LimiterPacing && (!__SK_IsDLSSGActive || !config.render.framerate.streamline.wantNativePacing()) && (config.render.framerate.enforcement_policy != 2 || ReadULongAcquire (&SK_Reflex_LastNativeSleepTime) == 0 || ReadULongAcquire (&SK_Reflex_LastNativeSleepTime) < SK_timeGetTime() - 250))
   {
     SK::Framerate::TickEx (false, dt, now, swapchain);
   }
