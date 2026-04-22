@@ -5611,22 +5611,8 @@ BringWindowToTop_Detour (HWND hWnd)
 {
   SK_LOG_FIRST_CALL;
 
-  // This breaks alt-tab and window activation in some cases
-#if 0
-  DWORD                            dwPid = 0x0;
-  GetWindowThreadProcessId (hWnd, &dwPid);
-
-  if (GetCurrentProcessId () == dwPid)
-  {
-    return
-      BringWindowToTop_Original (hWnd);
-  }
-
-  return FALSE;
-#else
   return
     BringWindowToTop_Original (hWnd);
-#endif
 }
 
 BOOL
@@ -5652,22 +5638,8 @@ SetForegroundWindow_Detour (HWND hWnd)
       return TRUE;
   }
 
-  // This breaks alt-tab and window activation in some cases
-#if 0
-  DWORD                            dwPid = 0x0;
-  GetWindowThreadProcessId (hWnd, &dwPid);
-
-  if (GetCurrentProcessId () == dwPid)
-  {
-    return
-      SetForegroundWindow_Original (hWnd);
-  }
-
-  return FALSE;
-#else
   return
     SetForegroundWindow_Original (hWnd);
-#endif
 }
 
 void
