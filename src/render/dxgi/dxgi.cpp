@@ -5095,10 +5095,12 @@ DXGISwap_ResizeBuffers_Override (IDXGISwapChain* This,
 
   if (SK_NvAPI_IsSmoothingMotion ())
   {
-    SK_MessageBox (
-      L"Please consider turning off NVIDIA Smooth Motion",
-      L"Smooth Motion is Incompatible with Special K (and a lot of other stuff)",
-      MB_OK | MB_ICONWARNING
+    SK_RunOnce (
+      SK_MessageBox (
+        L"Please consider turning off NVIDIA Smooth Motion",
+        L"Smooth Motion is Incompatible with Special K (and a lot of other stuff)",
+        MB_OK | MB_ICONWARNING
+      );
     );
 
     SK_LOGi0 (L" >> Skipping call because Smooth Motion leaks backbuffers.");
