@@ -24,6 +24,7 @@
 #include <SpecialK/stdafx.h>
 #include <SpecialK/render/dxgi/dxgi_hdr.h>
 #include <SpecialK/render/dxgi/dxgi_util.h>
+#include <SpecialK/nvapi.h>
 #include <imgui/font_awesome.h>
 
 #ifndef __SK_SUBSYSTEM__
@@ -1006,6 +1007,23 @@ public:
 
     _SK_HDR_10BitSwapChain->load (__SK_HDR_10BitSwap);
     _SK_HDR_16BitSwapChain->load (__SK_HDR_16BitSwap);
+
+
+    if (SK_NvAPI_IsSmoothingMotion ())
+    {
+      extern bool __SK_HDR_Disallow16BitSwap;
+                  __SK_HDR_Disallow16BitSwap = true;
+
+      if (__SK_HDR_16BitSwap)
+      {
+        __SK_HDR_10BitSwap =  true;
+        __SK_HDR_16BitSwap = false;
+
+        SK_ImGui_Warning (
+          L"scRGB HDR has been changed to HDR10 because NVIDIA Smooth Motion was detected."
+        );
+      }
+    }
 
 
     if (__SK_HDR_Disallow16BitSwap && __SK_HDR_16BitSwap)

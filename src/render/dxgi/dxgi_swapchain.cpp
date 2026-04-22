@@ -1009,6 +1009,12 @@ IWrapDXGISwapChain::ResizeBuffers ( UINT        BufferCount,
                                     UINT        Width,     UINT Height,
                                     DXGI_FORMAT NewFormat, UINT SwapChainFlags )
 {
+  if (SK_NvAPI_IsSmoothingMotion ())
+  {
+    SK_LOGi0 (L" >> Skipping ResizeBuffers (...) call because Smooth Motion leaks backbuffers.");
+    return S_OK;
+  }
+
   if (SK_DXGI_ZeroCopy == -1)
       SK_DXGI_ZeroCopy = (__SK_HDR_16BitSwap || __SK_HDR_10BitSwap);
 

@@ -920,7 +920,8 @@ SK_RenderBackend_V2::setLatencyMarkerNV (NV_LATENCY_MARKER_TYPE marker) const no
         markerParams.frameID    = static_cast <NvU64> (
              ReadULong64Acquire (&frames_drawn)       );
 
-      WriteULong64Release (&SK_Reflex_LastFrameId, markerParams.frameID);
+      if (markerParams.markerType != INPUT_SAMPLE) // Don't want this triggering a new frame ID
+        WriteULong64Release (&SK_Reflex_LastFrameId, markerParams.frameID);
 
       // Triggered input flash, in a Reflex-native game
       if (config.nvidia.reflex.native)

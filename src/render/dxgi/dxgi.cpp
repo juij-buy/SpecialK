@@ -5093,6 +5093,12 @@ DXGISwap_ResizeBuffers_Override (IDXGISwapChain* This,
   SK_DXGI_FormatToStr (NewFormat).data (),
                          SwapChainFlags );
 
+  if (SK_NvAPI_IsSmoothingMotion ())
+  {
+    SK_LOGi0 (L" >> Skipping call because Smooth Motion leaks backbuffers.");
+    return S_OK;
+  }
+
   return
     SK_DXGI_SwapChain_ResizeBuffers_Impl (
       This, BufferCount, Width, Height, NewFormat, SwapChainFlags, FALSE
@@ -6722,24 +6728,6 @@ DXGIFactory_CreateSwapChain_Override (
     return
       CreateSwapChain_Original ( This, pDevice,
                                    pDesc, ppSwapChain );
-  }
-
-  if (SK_NvAPI_IsSmoothingMotion ())
-  {
-    extern bool __SK_HDR_Disallow16BitSwap;
-                __SK_HDR_Disallow16BitSwap = true;
-
-    if (__SK_HDR_16BitSwap)
-    {
-      __SK_HDR_10BitSwap =  true;
-      __SK_HDR_16BitSwap = false;
-
-      SK_HDR_SetOverridesForGame (__SK_HDR_16BitSwap, __SK_HDR_10BitSwap);
-
-      SK_ImGui_Warning (
-        L"scRGB HDR has been changed to HDR10 because NVIDIA Smooth Motion was detected."
-      );
-    }
   }
 
   if (SK_GetCallingDLL () == SK_GetModuleHandleW (L"sl.dlss_g.dll") ||

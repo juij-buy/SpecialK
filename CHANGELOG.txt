@@ -1,4 +1,9 @@
-﻿26.4.20
+﻿26.4.22
+=======
+ + Added support for NVIDIA Smooth Motion, provided you do not try to change a
+     game's resolution; Smooth Motion leaks resources and this always fails.
+
+26.4.20
 =======
  + Fixed SK's Reflex Sleep checking native frame IDs in non-native Reflex games
 
