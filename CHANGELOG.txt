@@ -1,4 +1,11 @@
-﻿26.4.22
+﻿26.4.22.1
+=========
+ + Allow games to set the foreground window to themselves one time during
+     launch when Continue Rendering is enabled; subsequent attempts blocked.
+   * Needed because Crimson Desert sets the foreground window once per-frame,
+       and it would be impossible to use your PC while it is doing that.
+
+26.4.22
 =======
  + Added support for NVIDIA Smooth Motion, provided you do not try to change a
      game's resolution; Smooth Motion leaks resources and this always fails.

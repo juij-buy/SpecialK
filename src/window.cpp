@@ -5635,11 +5635,14 @@ SetForegroundWindow_Detour (HWND hWnd)
 {
   SK_LOG_FIRST_CALL;
 
-  // Fix problems with Crimson Sands bringing itself to the foreground constantly
+  // Fix problems with Crimson Desert bringing itself to the foreground constantly
   //   when using background rendering
   if ( hWnd == game_window.hWnd && config.window.background_render
                                 && !SK_IsGameWindowActive () )
   {
+    // First one's always free.
+    SK_RunOnce (return SetForegroundWindow_Original (hWnd));
+
     return TRUE;
   }
 
