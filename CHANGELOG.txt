@@ -1,4 +1,9 @@
-﻿26.4.22.2
+﻿26.4.22.3
+=========
+ + Fixed NvAPI driver profile API problems in some games like Elden Ring and
+     Sekiro that were introduced in 26.4.22.
+
+26.4.22.2
 =========
  + Warn if Smooth Motion is detected.
  + Add support for Smooth Motion in D3D12 games.

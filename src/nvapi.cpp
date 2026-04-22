@@ -2856,106 +2856,16 @@ sk::NVAPI::SetFramerateLimit (uint32_t limit)
 
 BOOL SK_NvAPI_IsSmoothingMotion (void)
 {
-  SK_RunOnce (sk::NVAPI::InitializeLibrary (SK_GetFullyQualifiedApp ()));
-
-  if (! nv_hardware)
-    return FALSE;
-
-  NvAPI_Status       ret       = NVAPI_ERROR;
-  NvDRSSessionHandle hSession  = { };
-
-  NVAPI_CALL (DRS_CreateSession (&hSession));
-  NVAPI_CALL (DRS_LoadSettings  ( hSession));
-
-               NvDRSProfileHandle hProfile       = { };
-  std::unique_ptr    <NVDRS_APPLICATION> app_ptr =
-    std::make_unique <NVDRS_APPLICATION> ();
-  NVDRS_APPLICATION&                     app     =
-                                        *app_ptr;
-
-  NVAPI_SILENT ();
-
-  app.version = NVDRS_APPLICATION_VER;
-  ret         = NVAPI_ERROR;
-
-  NVAPI_CALL2 ( DRS_FindApplicationByName ( hSession,
-                                              (NvU16 *)app_name.c_str (),
-                                                &hProfile,
-                                                  &app ),
-                ret );
-
-  // This is a status check only, if no profile exists, do not create one.
-  if (ret == NVAPI_EXECUTABLE_NOT_FOUND)
-  {
-    NVAPI_CALL (DRS_GetBaseProfile (hSession, &hProfile));
-
-    if (ret != NVAPI_OK)
-    {
-      NVAPI_CALL (DRS_DestroySession (hSession));
-      return FALSE;
-    }
-  }
-
-  NVDRS_SETTING smooth_motion_enable         = {               };
-                smooth_motion_enable.version = NVDRS_SETTING_VER;
-
-  static constexpr auto SMOOTH_MOTION_ENABLE_ID = 0xB0D384C0;
-
-  // Hack because NvAPI_DRS_GetSetting (...) is unable to read this setting for some reason...
-  //
   if (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"NvPresent64.dll",
                                                   L"NvPresent.dll")) != 0)
   {
-    //__SK_ForceDLSSGPacing = true;
-
-    smooth_motion_enable.u32CurrentValue = 1;
+    return TRUE;
   }
 
-#if 0
-  NVDRS_PROFILE profileInformation         = {               };
-                profileInformation.version = NVDRS_PROFILE_VER;
-
-  NvAPI_DRS_GetProfileInfo (hSession, hProfile,
-                                      &profileInformation);
-  std::vector <NVDRS_SETTING> settings (profileInformation.numOfSettings);
-
-  settings [0].version = NVDRS_SETTING_VER;
-
-  NvAPI_DRS_EnumSettings (hSession, hProfile, 0, &profileInformation.numOfSettings, settings.data ());
-
-  for (auto i = 0u; i < profileInformation.numOfSettings; ++i)
+  else
   {
-    if (settings [i].settingId == SMOOTH_MOTION_ENABLE_ID)
-    {
-      smooth_motion_enable = settings [i];
-      break;
-    }
+    return FALSE;
   }
-#endif
-
-  // If NVAPI were working correctly, we would call this code.
-  //
-  //// These settings may not exist, and getting back a value of 0 is okay...
-  //NVAPI_SILENT  ();
-  //NVAPI_CALL    (DRS_GetSetting (hSession, hProfile, SMOOTH_MOTION_ENABLE_ID, &smooth_motion_enable));
-  //NVAPI_VERBOSE ();
-
-  //SK_LOGi0 (L"Smooth Motion: %x", smooth_motion_enable.u32CurrentValue);
-
-  BOOL bRet =
-   ( smooth_motion_enable.u32CurrentValue != 0 )
-                                          ? TRUE
-                                          : FALSE;
-
-  if (bRet)
-  {
-    // Smooth Motion requires this
-    config.nvidia.dlss.allow_flip_metering = true;
-  }
-
-  NVAPI_CALL (DRS_DestroySession (hSession));
-
-  return bRet;
 }
 
 BOOL SK_NvAPI_GetVRREnablement (void)
