@@ -5643,7 +5643,13 @@ SetForegroundWindow_Detour (HWND hWnd)
     // First one's always free.
     SK_RunOnce (return SetForegroundWindow_Original (hWnd));
 
-    return TRUE;
+    DWORD                                                    dwFgPid = 0x0;
+    SK_GetWindowThreadProcessId (SK_GetForegroundWindow (), &dwFgPid);
+
+    // If software has multiple windows, and one of them is foreground,
+    //   then let it do this. Otherwise ignore the call...
+    if (dwFgPid != GetCurrentProcessId ())
+      return TRUE;
   }
 
   // This breaks alt-tab and window activation in some cases
