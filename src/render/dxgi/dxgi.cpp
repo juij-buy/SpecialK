@@ -5095,7 +5095,58 @@ DXGISwap_ResizeBuffers_Override (IDXGISwapChain* This,
 
   if (SK_NvAPI_IsSmoothingMotion ())
   {
+    SK_MessageBox (
+      L"Please consider turning off NVIDIA Smooth Motion",
+      L"Smooth Motion is Incompatible with Special K (and a lot of other stuff)",
+      MB_OK | MB_ICONWARNING
+    );
+
     SK_LOGi0 (L" >> Skipping call because Smooth Motion leaks backbuffers.");
+
+    auto _D3D12_ResetBufferIndexToZero = [&](void)
+    {
+      SK_ComPtr <ID3D12Device>                     pD3D12Dev;
+      This->GetDevice (IID_ID3D12Device, (void **)&pD3D12Dev.p);
+
+      bool d3d12 =
+        (pD3D12Dev.p != nullptr);
+
+      SK_ComQIPtr <IDXGISwapChain3>
+               pSwap3 (This);
+
+      // When skipping resize operations in D3D12, there's an important side-effect that
+      //   must be reproduced:
+      //
+      //    * Current Buffer Index reverts to 0 on success
+      //
+      //  --> We need to make several unsynchronized Present calls until we advance back to
+      //        backbuffer index 0.
+      if (d3d12 && pSwap3->GetCurrentBackBufferIndex () != 0)
+      {
+        int iUnsyncedPresents = 0;
+
+        HRESULT hrUnsynced =
+          This->Present (0, DXGI_PRESENT_RESTART | DXGI_PRESENT_DO_NOT_WAIT);
+
+        while ( SUCCEEDED (hrUnsynced) ||
+                           hrUnsynced == DXGI_ERROR_WAS_STILL_DRAWING )
+        {
+          ++iUnsyncedPresents;
+
+          if (pSwap3->GetCurrentBackBufferIndex () == 0)
+            break;
+
+          hrUnsynced =
+            This->Present (0, DXGI_PRESENT_RESTART | DXGI_PRESENT_DO_NOT_WAIT);
+        }
+
+        SK_LOGi0 (
+          L"Issued %d unsync'd Presents to reset the SwapChain's current index to 0 "
+          L"(required D3D12 ResizeBuffers behavior)", iUnsyncedPresents
+        );
+      }
+    };
+
     return S_OK;
   }
 

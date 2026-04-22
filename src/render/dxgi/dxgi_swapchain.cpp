@@ -2648,6 +2648,12 @@ SK_DXGI_SwapChain_ResizeBuffers_Impl (
   else
     skippable = false;
 
+  if (SK_NvAPI_IsSmoothingMotion ())
+  {
+    SK_LOGi0 (L" >> Skipping call because Smooth Motion leaks backbuffers.");
+    skippable = true;
+  }
+
   HRESULT ret = S_OK;
 
   if (! skippable)
@@ -2732,16 +2738,6 @@ SK_DXGI_SwapChain_ResizeBuffers_Impl (
                     SK_DXGI_FormatToStr (swap_desc.BufferDesc.Format).data (),
                                          swap_desc.Flags
     );
-
-    //extern bool __SK_HDR_UserForced;
-    //
-    //if (! __SK_HDR_UserForced)
-    //{
-    //  SK_ComQIPtr <IDXGISwapChain4>
-    //        pSwap4 (pSwapChain);
-    //    if (pSwap4 != nullptr)
-    //        pSwap4->SetColorSpace1 (DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709);
-    //}
 
     _D3D12_ResetBufferIndexToZero ();
   }

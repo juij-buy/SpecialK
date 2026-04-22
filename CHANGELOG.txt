@@ -1,4 +1,9 @@
-﻿26.4.22.1
+﻿26.4.22.2
+=========
+ + Warn if Smooth Motion is detected.
+ + Add support for Smooth Motion in D3D12 games.
+
+26.4.22.1
 =========
  + Allow games to set the foreground window to themselves one time during
      launch when Continue Rendering is enabled; subsequent attempts blocked.

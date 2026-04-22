@@ -5635,7 +5635,13 @@ SetForegroundWindow_Detour (HWND hWnd)
     // If software has multiple windows, and one of them is foreground,
     //   then let it do this. Otherwise ignore the call...
     if (dwFgPid != GetCurrentProcessId ())
+    {
+      SK_RunOnce (
+        SK_LOGi0 (L"SetForegroundWindow (...) blocked because Continue "
+                  L"Rendering is enabled.")
+      );
       return TRUE;
+    }
   }
 
   return
