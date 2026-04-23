@@ -1235,6 +1235,26 @@ SK_SelfDestruct (void) noexcept
   } while (ReadAcquire (&__SK_Init) != -2);
 }
 
+bool
+SK_IsModuleInCallstack (HMODULE hModule) noexcept
+{
+  void*                            backtrace [32] = { };
+  RtlCaptureStackBackTrace (0, 32, backtrace, nullptr);
+
+  for ( auto& frame : backtrace )
+  {
+    if (frame == nullptr)
+      break;
+
+    if (SK_GetCallingDLL (frame) == hModule)
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 HMODULE
 SK_GetCallingDLL (LPCVOID pReturn) noexcept
 {

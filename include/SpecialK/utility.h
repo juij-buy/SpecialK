@@ -285,6 +285,7 @@ std::wstring   SK_GetCallerName             (LPCVOID pReturn                    
 std::wstring   SK_GetCallerFullName         (LPCVOID pReturn                                 = _ReturnAddress ()) noexcept;
 bool           SK_IsCallingDLL              (const wchar_t* const wszModule, LPCVOID pReturn = _ReturnAddress ()) noexcept;
 bool           SK_IsCallingDLL              (      HMODULE          hModule, LPCVOID pReturn = _ReturnAddress ()) noexcept;
+bool           SK_IsModuleInCallstack       (HMODULE hModule)                                                     noexcept;
 HMODULE        SK_GetModuleFromAddr         (LPCVOID addr);
 std::wstring   SK_GetModuleName             (HMODULE hDll);
 std::wstring   SK_GetModuleFullName         (HMODULE hDll);
