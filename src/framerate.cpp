@@ -426,11 +426,11 @@ CreateWaitableTimerW_Detour ( _In_opt_ LPSECURITY_ATTRIBUTES lpTimerAttributes,
                              sk::NVAPI::nvwgf2umx != SK_GetCallingDLL ()))
   {
     SK_LOGi1 (
-      L"Promoting Waitable Timer%hs%ws%hsto a High-Resolution %hstimer -- [ %ws, tid=%04x ]",
-        lpTimerName != nullptr ? "'"            :   "",
-        lpTimerName != nullptr ? lpTimerName    : L" ",
-        lpTimerName != nullptr ? "'"            :   "",
-                  bManualReset ? "Manual Reset" :   "",
+      L"Promoting Waitable Timer %hs%ws%hs to a High-Resolution %hstimer -- [ %ws, tid=%04x ]",
+        lpTimerName != nullptr ? "'"             :  "",
+        lpTimerName != nullptr ? lpTimerName     : L"",
+        lpTimerName != nullptr ? "' "            :  "",
+                  bManualReset ? "Manual Reset " :  "",
         SK_GetCallerName      ().c_str (),
         SK_GetCurrentThreadId ()
     );
@@ -479,11 +479,11 @@ CreateWaitableTimerA_Detour ( _In_opt_ LPSECURITY_ATTRIBUTES lpTimerAttributes,
                              sk::NVAPI::nvwgf2umx != SK_GetCallingDLL ()))
   {
     SK_LOGi1 (
-      L"Promoting Waitable Timer%hs%hs%hsto a High-Resolution %hstimer -- [ %ws, tid=%04x ]",
-        lpTimerName != nullptr ? "'"            :  "",
-        lpTimerName != nullptr ? lpTimerName    : " ",
-        lpTimerName != nullptr ? "'"            :  "",
-                  bManualReset ? "Manual Reset" :  "",
+      L"Promoting Waitable Timer %hs%ws%hsto a High-Resolution %hstimer -- [ %ws, tid=%04x ]",
+        lpTimerName != nullptr ? "'"             : "",
+        lpTimerName != nullptr ? lpTimerName     : "",
+        lpTimerName != nullptr ? "' "            : "",
+                  bManualReset ? "Manual Reset " : "",
         SK_GetCallerName      ().c_str (),
         SK_GetCurrentThreadId ()
     );
