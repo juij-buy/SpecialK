@@ -5086,6 +5086,13 @@ DXGISwap_ResizeBuffers_Override (IDXGISwapChain* This,
   _In_ DXGI_FORMAT     NewFormat,
   _In_ UINT            SwapChainFlags)
 {
+  static HMODULE hModNvPresent =
+    SK_RunLHIfBitness (64, SK_GetModuleHandleW (L"NvPresent64.dll"),
+                           SK_GetModuleHandleW (L"NvPresent.dll"));
+
+  bool bCalledFromNvPresent = hModNvPresent != 0 &&
+      SK_IsModuleInCallstack (hModNvPresent);
+
   DXGI_LOG_CALL_I5 ( L"    IDXGISwapChain", L"ResizeBuffers         ",
                    L"%u,%u,%u,%hs,0x%08X",
                    BufferCount,
@@ -5093,61 +5100,18 @@ DXGISwap_ResizeBuffers_Override (IDXGISwapChain* This,
   SK_DXGI_FormatToStr (NewFormat).data (),
                          SwapChainFlags );
 
-  if (SK_NvAPI_IsSmoothingMotion ())
+  if (bCalledFromNvPresent)
   {
+    SK_D3D12_ResetBufferIndexToZero (This);
+
     SK_RunOnce (
-      SK_MessageBox (
-        L"Please consider turning off NVIDIA Smooth Motion",
-        L"Smooth Motion is Incompatible with Special K (and a lot of other stuff)",
-        MB_OK | MB_ICONWARNING
+      SK_ImGui_WarningWithTitle (
+        L"Smooth Motion is Unreliable with Special K (and a lot of other stuff)",
+        L"Please consider turning off NVIDIA Smooth Motion"
       );
     );
 
     SK_LOGi0 (L" >> Skipping call because Smooth Motion leaks backbuffers.");
-
-    auto _D3D12_ResetBufferIndexToZero = [&](void)
-    {
-      SK_ComPtr <ID3D12Device>                     pD3D12Dev;
-      This->GetDevice (IID_ID3D12Device, (void **)&pD3D12Dev.p);
-
-      bool d3d12 =
-        (pD3D12Dev.p != nullptr);
-
-      SK_ComQIPtr <IDXGISwapChain3>
-               pSwap3 (This);
-
-      // When skipping resize operations in D3D12, there's an important side-effect that
-      //   must be reproduced:
-      //
-      //    * Current Buffer Index reverts to 0 on success
-      //
-      //  --> We need to make several unsynchronized Present calls until we advance back to
-      //        backbuffer index 0.
-      if (d3d12 && pSwap3->GetCurrentBackBufferIndex () != 0)
-      {
-        int iUnsyncedPresents = 0;
-
-        HRESULT hrUnsynced =
-          This->Present (0, DXGI_PRESENT_RESTART | DXGI_PRESENT_DO_NOT_WAIT);
-
-        while ( SUCCEEDED (hrUnsynced) ||
-                           hrUnsynced == DXGI_ERROR_WAS_STILL_DRAWING )
-        {
-          ++iUnsyncedPresents;
-
-          if (pSwap3->GetCurrentBackBufferIndex () == 0)
-            break;
-
-          hrUnsynced =
-            This->Present (0, DXGI_PRESENT_RESTART | DXGI_PRESENT_DO_NOT_WAIT);
-        }
-
-        SK_LOGi0 (
-          L"Issued %d unsync'd Presents to reset the SwapChain's current index to 0 "
-          L"(required D3D12 ResizeBuffers behavior)", iUnsyncedPresents
-        );
-      }
-    };
 
     return S_OK;
   }

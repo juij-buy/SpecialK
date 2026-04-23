@@ -1,4 +1,11 @@
-﻿26.4.22.3
+﻿26.4.22.4
+=========
+ + Changed Smooth Motion warning to an ImGui popup rather than Win32 MessageBox
+ + Added new method to walk the callstack and find DLLs earlier in a hook chain
+     for highly-hooked functions when all the DLLs that are modifying the API
+       need to be known.
+
+26.4.22.3
 =========
  + Fixed NvAPI driver profile API problems in some games like Elden Ring and
      Sekiro that were introduced in 26.4.22.

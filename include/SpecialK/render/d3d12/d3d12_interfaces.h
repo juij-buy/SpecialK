@@ -716,6 +716,9 @@ void SK_D3D12_BeginFrame (void);
 void SK_D3D12_EndFrame   (SK_TLS* pTLS = SK_TLS_Bottom ());
 
 
+void SK_D3D12_ResetBufferIndexToZero (IDXGISwapChain* pSwapChain);
+
+
 
 static inline GUID
   SKID_D3D12LastFrameUsed =
