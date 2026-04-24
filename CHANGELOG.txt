@@ -1,4 +1,10 @@
-﻿26.4.24
+﻿26.4.24.1
+=========
+ + Allow ReShade to be used while NVIDIA Smooth Motion is active, though the
+     option to draw ReShade before/after SK will not work.
+   * GlobalInjectionDelay=5.0 works pretty reliably in D3D11/12 + ReShade.
+
+26.4.24
 =======
  + Disabled NVIDIA Smooth Motion until compatibility can be resolved.
     * A GlobalInjectionDelay=<number_of_seconds> may help with compat., but it

@@ -1018,7 +1018,8 @@ IWrapDXGISwapChain::ResizeBuffers ( UINT        BufferCount,
   DXGI_SWAP_CHAIN_DESC swapDesc = { };
   GetDesc            (&swapDesc);
 
-  if (! _backbuffer_rtvs.empty ())
+  if ((! _backbuffer_rtvs.empty () ||
+      (! _backbuffer_srvs.empty ())))
   {
     std::scoped_lock lock (_backbufferLock);
 
@@ -1032,6 +1033,17 @@ IWrapDXGISwapChain::ResizeBuffers ( UINT        BufferCount,
     }
 
     _backbuffer_rtvs.clear ();
+
+    for ( auto& srv : _backbuffer_srvs )
+    {
+      if (srv.second != nullptr)
+      {
+        srv.second->Release ();
+        srv.second = nullptr;
+      }
+    }
+
+    _backbuffer_srvs.clear ();
   }
 
   HRESULT hr =
@@ -1088,6 +1100,11 @@ IWrapDXGISwapChain::ResizeBuffers ( UINT        BufferCount,
                   _backbuffer_srvs [backbuffer.p]  = nullptr;
               }
 
+              if (_backbuffer_rtvs [backbuffer.p] != nullptr)
+              {   _backbuffer_rtvs [backbuffer.p]->Release ();
+                  _backbuffer_rtvs [backbuffer.p]  = nullptr;
+              }
+
               backbuffer.Release ();
             }
           }
@@ -1108,6 +1125,7 @@ IWrapDXGISwapChain::ResizeBuffers ( UINT        BufferCount,
         {
           SK_LOGi1 (L"ResizeBuffers => Clear");
           _backbuffers.clear ();
+          _backbuffer_rtvs.clear ();
           _backbuffer_srvs.clear ();
         }
       }

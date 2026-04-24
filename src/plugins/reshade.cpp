@@ -1509,8 +1509,15 @@ SK_ReShadeAddOn_Init (HMODULE reshade_module)
         (!(SK_ReShade_HasRenoDX () || has_renodx) || config.reshade.allow_addon_with_reno);
 
       reshade::register_event <reshade::addon_event::present>                (SK_ReShadeAddOn_Present);
-      reshade::register_event <reshade::addon_event::init_effect_runtime>    (SK_ReShadeAddOn_InitRuntime);
-      reshade::register_event <reshade::addon_event::destroy_effect_runtime> (SK_ReShadeAddOn_DestroyRuntime);
+
+      bool bSmoothMotion =
+        SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                               SK_IsModuleLoaded (L"NvPresent.dll"));
+      if (! bSmoothMotion){
+        reshade::register_event <reshade::addon_event::init_effect_runtime>    (SK_ReShadeAddOn_InitRuntime);
+        reshade::register_event <reshade::addon_event::destroy_effect_runtime> (SK_ReShadeAddOn_DestroyRuntime);
+      }
+
       reshade::register_event <reshade::addon_event::destroy_device>         (SK_ReShadeAddOn_DestroyDevice);
       reshade::register_event <reshade::addon_event::destroy_swapchain>      (SK_ReShadeAddOn_DestroySwapChain);
       reshade::register_event <reshade::addon_event::destroy_command_queue>  (SK_ReShadeAddOn_DestroyCmdQueue);

@@ -3050,6 +3050,9 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
     }
   }
 
+  //if (StrStrIW (SK_Thread_GetName (SK_GetCurrentThread ()), L"nvp.pacer_"))
+  //  return _Present ( SyncInterval, Flags );
+
   //
   // Early-out for games that use testing to minimize blocking
   //
@@ -4459,6 +4462,8 @@ SK_DXGI_ResizeTarget ( IDXGISwapChain *This,
                   _In_ DXGI_MODE_DESC *pNewTargetParameters,
                        BOOL            bApplyOverrides )
 {
+  return S_OK;
+
   assert (pNewTargetParameters != nullptr);
 
   if (pNewTargetParameters == nullptr)
@@ -5087,6 +5092,8 @@ DXGISwap_ResizeBuffers_Override (IDXGISwapChain* This,
   _In_ DXGI_FORMAT     NewFormat,
   _In_ UINT            SwapChainFlags)
 {
+  return S_OK;
+
   DXGI_LOG_CALL_I5 ( L"    IDXGISwapChain", L"ResizeBuffers         ",
                    L"%u,%u,%u,%hs,0x%08X",
                    BufferCount,
@@ -5106,6 +5113,8 @@ STDMETHODCALLTYPE
 DXGISwap_ResizeTarget_Override ( IDXGISwapChain *This,
                       _In_ const DXGI_MODE_DESC *pNewTargetParameters )
 {
+  return S_OK;
+
   DXGI_LOG_CALL_I6 (
     L"    IDXGISwapChain", L"ResizeTarget         ",
       L"{ (%ux%u@%3.1f Hz),"
@@ -8728,6 +8737,19 @@ public:
                                                                    IDXGISwapChain **ppSwapChain)                      override {
     SK_LOG_FIRST_CALL
 
+    if (nv_present)
+    {
+      HRESULT hr =
+        pReal->CreateSwapChain (pDevice, pDesc, ppSwapChain);
+
+      if (SUCCEEDED (hr)) {
+        const uint8_t                                                 x = 1;
+        (*ppSwapChain)->SetPrivateData (SKID_DXGI_DummySwapChain, 1, &x);
+
+        return hr;
+      }
+    }
+
     return pReal->CreateSwapChain (pDevice, pDesc, ppSwapChain);
   }
   virtual HRESULT STDMETHODCALLTYPE CreateSoftwareAdapter         (HMODULE Module, IDXGIAdapter **ppAdapter)          override { return pReal->CreateSoftwareAdapter   (Module, ppAdapter);           }
@@ -8893,6 +8915,7 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
     if (SK_IsModuleInCallstack (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"NvPresent64.dll",
                                                                             L"NvPresent.dll"))))
     {
+#if 1
       if (IsEqualGUID (riid_, IID_IDXGIFactory2))
       {
         SK_ReleaseAssert (IsEqualGUID (riid_, IID_IDXGIFactory2));
@@ -8915,6 +8938,7 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
 
         return hr;
       }
+#endif
     }
   }
 
@@ -8957,10 +8981,11 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
 
     *ppFactory = newFactory;
 #else
+    SK_DXGI_LazyHookFactory ((IDXGIFactory *)pFactory_);
+
+  //*ppFactory = new SK_NV_SmoothMotionFactory2 ((IDXGIFactory *)pFactory_);
     *ppFactory = pFactory_;
 #endif
-
-    SK_DXGI_LazyHookFactory ((IDXGIFactory *)*ppFactory);
 
     if (config.render.dxgi.use_factory_cache && Flags != 0x1) // 0x1 == Debug Factory
     {
