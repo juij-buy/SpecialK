@@ -1076,7 +1076,17 @@ SleepEx_Detour (DWORD dwMilliseconds, BOOL bAlertable)
   if (dwMilliseconds == (DWORD)-1)
   {
     // If this assertion fails, this sleep is irreversible!
-    SK_ReleaseAssert (dwMilliseconds != (DWORD)-1 || bAlertable != FALSE);
+    //SK_ReleaseAssert (dwMilliseconds != (DWORD)-1 || bAlertable != FALSE);
+
+    if (dwMilliseconds == (DWORD)-1 && bAlertable == false)
+    {
+      SK_RunOnce (
+        SK_LOGi0 ( L"SleepEx called with INFINITE and non-alertable, which is "
+                   L"potentially irreversible!  If this is intentional, just "
+                   L"ignore this warning.  If not, this may be a bug that can "
+                   L"cause hangs during shutdown or DLL detach." );
+      );
+    }
 
     return
       SK_SleepEx (dwMilliseconds, bAlertable);

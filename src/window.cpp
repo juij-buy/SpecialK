@@ -10551,6 +10551,7 @@ SK_ImGui_InitDragAndDrop (void)
         if (! SK_GetCurrentRenderBackend ().windows.unreal)
         {
           SK_LOGi0 (L"OLE Drop Target for HWND: %x already registered!", game_window.hWnd);
+          incompatible = true;
         }
 
         else

@@ -1839,7 +1839,7 @@ SK_Unity_SetFixedDeltaTime (float fixed_delta_time)
             }
           }
 
-          SK_ReleaseAssert (fTimeScale == 0.0f || fTimeScale == 1.0f);
+          //SK_ReleaseAssert (fTimeScale == 0.0f || fTimeScale == 1.0f);
 
           void* params [1] = { &fixed_delta_time_static };
 
