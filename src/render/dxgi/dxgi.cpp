@@ -4462,8 +4462,6 @@ SK_DXGI_ResizeTarget ( IDXGISwapChain *This,
                   _In_ DXGI_MODE_DESC *pNewTargetParameters,
                        BOOL            bApplyOverrides )
 {
-  return S_OK;
-
   assert (pNewTargetParameters != nullptr);
 
   if (pNewTargetParameters == nullptr)
@@ -5092,8 +5090,6 @@ DXGISwap_ResizeBuffers_Override (IDXGISwapChain* This,
   _In_ DXGI_FORMAT     NewFormat,
   _In_ UINT            SwapChainFlags)
 {
-  return S_OK;
-
   DXGI_LOG_CALL_I5 ( L"    IDXGISwapChain", L"ResizeBuffers         ",
                    L"%u,%u,%u,%hs,0x%08X",
                    BufferCount,
@@ -5113,8 +5109,6 @@ STDMETHODCALLTYPE
 DXGISwap_ResizeTarget_Override ( IDXGISwapChain *This,
                       _In_ const DXGI_MODE_DESC *pNewTargetParameters )
 {
-  return S_OK;
-
   DXGI_LOG_CALL_I6 (
     L"    IDXGISwapChain", L"ResizeTarget         ",
       L"{ (%ux%u@%3.1f Hz),"

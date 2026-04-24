@@ -1,4 +1,8 @@
-﻿26.4.24.1
+﻿26.4.24.2
+=========
+ + Accidentally left SwapChain resize functions nop'd out (!!)
+
+26.4.24.1
 =========
  + Allow ReShade to be used while NVIDIA Smooth Motion is active, though the
      option to draw ReShade before/after SK will not work.
