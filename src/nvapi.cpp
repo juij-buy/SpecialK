@@ -1820,7 +1820,7 @@ NvAPI_DRS_GetSetting_Detour (NvDRSSessionHandle hSession, NvDRSProfileHandle hPr
   NvAPI_Status status =
     NvAPI_DRS_GetSetting_Original (hSession, hProfile, settingId, pSetting);
 
-  if (NVAPI_OK == status && SK_GetCallingDLL () != SK_GetDLL ())
+  if (NVAPI_OK == status && !SK_IsModuleInCallstack (SK_GetDLL ()))
   {
     switch (settingId)
     {

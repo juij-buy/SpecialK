@@ -1,4 +1,10 @@
-﻿26.4.22.4
+﻿26.4.24
+=======
+ + Disabled NVIDIA Smooth Motion until compatibility can be resolved.
+    * A GlobalInjectionDelay=<number_of_seconds> may help with compat., but it
+        will not allow HDR retrodfits.
+
+26.4.22.4
 =========
  + Changed Smooth Motion warning to an ImGui popup rather than Win32 MessageBox
  + Added new method to walk the callstack and find DLLs earlier in a hook chain

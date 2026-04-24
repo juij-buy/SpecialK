@@ -1238,6 +1238,9 @@ SK_SelfDestruct (void) noexcept
 bool
 SK_IsModuleInCallstack (HMODULE hModule) noexcept
 {
+  if (hModule == nullptr)
+    return false;
+
   void*                            backtrace [32] = { };
   RtlCaptureStackBackTrace (0, 32, backtrace, nullptr);
 

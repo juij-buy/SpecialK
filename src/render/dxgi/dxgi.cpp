@@ -583,7 +583,8 @@ bool WaitForInitDXGI (DWORD dwTimeout)
     return true;
 
   // Waiting while Streamline has plugins loaded would deadlock us in local injection
-  if (SK_IsModuleLoaded (L"sl.common.dll") || SK_IsModuleLoaded (L"NvPresent64.dll"))
+  if (SK_IsModuleLoaded (L"sl.common.dll") || SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                                                                     SK_IsModuleLoaded (L"NvPresent.dll")))
   {
     SK_Thread_SpinUntilFlaggedEx (&__dxgi_ready, 250UL);
   }
@@ -5086,35 +5087,12 @@ DXGISwap_ResizeBuffers_Override (IDXGISwapChain* This,
   _In_ DXGI_FORMAT     NewFormat,
   _In_ UINT            SwapChainFlags)
 {
-  static HMODULE hModNvPresent =
-    SK_RunLHIfBitness (64, SK_GetModuleHandleW (L"NvPresent64.dll"),
-                           SK_GetModuleHandleW (L"NvPresent.dll"));
-
-  bool bCalledFromNvPresent = hModNvPresent != 0 &&
-      SK_IsModuleInCallstack (hModNvPresent);
-
   DXGI_LOG_CALL_I5 ( L"    IDXGISwapChain", L"ResizeBuffers         ",
                    L"%u,%u,%u,%hs,0x%08X",
                    BufferCount,
                      Width, Height,
   SK_DXGI_FormatToStr (NewFormat).data (),
                          SwapChainFlags );
-
-  if (bCalledFromNvPresent)
-  {
-    SK_D3D12_ResetBufferIndexToZero (This);
-
-    SK_RunOnce (
-      SK_ImGui_WarningWithTitle (
-        L"Smooth Motion is Unreliable with Special K (and a lot of other stuff)",
-        L"Please consider turning off NVIDIA Smooth Motion"
-      );
-    );
-
-    SK_LOGi0 (L" >> Skipping call because Smooth Motion leaks backbuffers.");
-
-    return S_OK;
-  }
 
   return
     SK_DXGI_SwapChain_ResizeBuffers_Impl (
@@ -7741,11 +7719,14 @@ _In_opt_       IDXGIOutput                     *pRestrictToOutput,
       {
         extern bool SK_NV_D3D11_HasInteropDevice;
 
+        bool nvoglv_caller  = SK_IsModuleInCallstack (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"nvoglv64", L"nvoglv")));
+        bool vulkan1_caller = SK_IsModuleInCallstack (SK_GetModuleHandleW (L"vulkan-1"));
+
         //
         // Detect NVIDIA's Interop SwapChain
         //
-        if (bNvInterop || StrStrIW (SK_GetCallerName ().c_str (), L"nvoglv")   ||
-                          StrStrIW (SK_GetCallerName ().c_str (), L"vulkan-1") || SK_NV_D3D11_HasInteropDevice)
+        if (bNvInterop || nvoglv_caller  ||
+                          vulkan1_caller || SK_NV_D3D11_HasInteropDevice)
         {
           UINT                                 uiFlagAsInterop = SK_DXGI_VK_INTEROP_TYPE_NV;
           (*ppSwapChain)->SetPrivateData (
@@ -7789,11 +7770,13 @@ _In_opt_       IDXGIOutput                     *pRestrictToOutput,
           SK_LOGi0 (L"Detected a Vulkan/DXGI Interop SwapChain");
         }
 
+        bool nvoglv_caller  = SK_IsModuleInCallstack (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"nvoglv64", L"nvoglv")));
+        bool vulkan1_caller = SK_IsModuleInCallstack (SK_GetModuleHandleW (L"vulkan-1"));
+
         //
         // Detect NVIDIA's Interop SwapChain (this is not its final form)
         //
-        if (bNvInterop || StrStrIW (SK_GetCallerName ().c_str (), L"nvoglv") ||
-                          StrStrIW (SK_GetCallerName ().c_str (), L"vulkan-1"))
+        if (bNvInterop || nvoglv_caller || vulkan1_caller)
         {
           UINT                                 uiFlagAsInterop = SK_DXGI_VK_INTEROP_TYPE_NV;
           (*ppSwapChain)->SetPrivateData (
@@ -8643,11 +8626,13 @@ WINAPI CreateDXGIFactory1 (REFIID   riid,
 
   if (SUCCEEDED (hr))
   {
+    bool nvoglv_caller  = SK_IsModuleInCallstack (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"nvoglv64", L"nvoglv")));
+    bool vulkan1_caller = SK_IsModuleInCallstack (SK_GetModuleHandleW (L"vulkan-1"));
+
     // Detect NVIDIA Vulkan/DXGI Interop Factories
     if (iver >= 7)
     {
-      if (StrStrIW (SK_GetCallerName ().c_str (), L"nvoglv") ||
-          StrStrIW (SK_GetCallerName ().c_str (), L"vulkan-1"))
+      if (nvoglv_caller || vulkan1_caller)
       {
         SK_NV_DisableVulkanOn12Interop ();
         
@@ -8672,6 +8657,141 @@ WINAPI CreateDXGIFactory1 (REFIID   riid,
 }
 
 thread_local bool initializing_dxgi = false;
+
+class SK_NV_SmoothMotionFactory2 : public IDXGIFactory7
+{
+public:
+  SK_NV_SmoothMotionFactory2 (IDXGIFactory* real, bool NvPresent = false) {
+    if (     SUCCEEDED (real->QueryInterface (IID_IDXGIFactory7, (void **)&pReal)))
+      version = 7;
+    else if (SUCCEEDED (real->QueryInterface (IID_IDXGIFactory6, (void **)&pReal)))
+      version = 6;
+    else if (SUCCEEDED (real->QueryInterface (IID_IDXGIFactory5, (void **)&pReal)))
+      version = 5;
+    else if (SUCCEEDED (real->QueryInterface (IID_IDXGIFactory4, (void **)&pReal)))
+      version = 4;
+    else if (SUCCEEDED (real->QueryInterface (IID_IDXGIFactory3, (void **)&pReal)))
+      version = 3;
+    else if (SUCCEEDED (real->QueryInterface (IID_IDXGIFactory2, (void **)&pReal)))
+      version = 2;
+    else if (SUCCEEDED (real->QueryInterface (IID_IDXGIFactory1, (void **)&pReal)))
+      version = 1;
+    else {
+      version = 0;
+      pReal = (IDXGIFactory7 *)real;
+    }
+
+    if (version > 0)
+    {
+      real->Release ();
+    }
+
+    nv_present = NvPresent;
+  };
+
+  virtual HRESULT STDMETHODCALLTYPE QueryInterface                (REFIID riid, void __RPC_FAR *__RPC_FAR *ppvObject) override {
+    SK_LOG_FIRST_CALL
+
+    if (ppvObject == nullptr)
+        return E_INVALIDARG;
+
+    if ( riid == __uuidof (IDXGIFactory)                   ||
+        (riid == __uuidof (IDXGIFactory1) && version >= 1) ||
+        (riid == __uuidof (IDXGIFactory2) && version >= 2) ||
+        (riid == __uuidof (IDXGIFactory3) && version >= 3) ||
+        (riid == __uuidof (IDXGIFactory4) && version >= 4) ||
+        (riid == __uuidof (IDXGIFactory5) && version >= 5) ||
+        (riid == __uuidof (IDXGIFactory6) && version >= 6) ||
+        (riid == __uuidof (IDXGIFactory7) && version >= 7) ||
+         riid == __uuidof (IDXGIObject)                    ||
+         riid == __uuidof (IUnknown))
+    {
+      AddRef ();
+
+      *ppvObject = this;
+
+      return S_OK;
+    }
+
+    return pReal->QueryInterface (riid, ppvObject);
+  }
+  virtual ULONG   STDMETHODCALLTYPE AddRef                        (void)                                              override { return pReal->AddRef                  ();                            }
+  virtual ULONG   STDMETHODCALLTYPE Release                       (void)                                              override { return pReal->Release                 ();                            }
+  virtual HRESULT STDMETHODCALLTYPE SetPrivateData                (REFGUID Name, UINT DataSize, const void *pData)    override { return pReal->SetPrivateData          (Name, DataSize, pData);       }
+  virtual HRESULT STDMETHODCALLTYPE SetPrivateDataInterface       (REFGUID Name, const IUnknown *pUnknown)            override { return pReal->SetPrivateDataInterface (Name, pUnknown);              }
+  virtual HRESULT STDMETHODCALLTYPE GetPrivateData                (REFGUID Name, UINT *pDataSize, void *pData)        override { return pReal->GetPrivateData          (Name, pDataSize, pData);      }
+  virtual HRESULT STDMETHODCALLTYPE GetParent                     (REFIID riid, void **ppParent)                      override { return pReal->GetParent               (riid, ppParent);              }
+  virtual HRESULT STDMETHODCALLTYPE EnumAdapters                  (UINT Adapter, IDXGIAdapter **ppAdapter)            override { return pReal->EnumAdapters            (Adapter, ppAdapter);          }
+  virtual HRESULT STDMETHODCALLTYPE MakeWindowAssociation         (HWND WindowHandle, UINT Flags)                     override { return pReal->MakeWindowAssociation   (WindowHandle, Flags);         }
+  virtual HRESULT STDMETHODCALLTYPE GetWindowAssociation          (HWND *pWindowHandle)                               override { return pReal->GetWindowAssociation    (pWindowHandle);               }
+  virtual HRESULT STDMETHODCALLTYPE CreateSwapChain               (IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc,
+                                                                   IDXGISwapChain **ppSwapChain)                      override {
+    SK_LOG_FIRST_CALL
+
+    return pReal->CreateSwapChain (pDevice, pDesc, ppSwapChain);
+  }
+  virtual HRESULT STDMETHODCALLTYPE CreateSoftwareAdapter         (HMODULE Module, IDXGIAdapter **ppAdapter)          override { return pReal->CreateSoftwareAdapter   (Module, ppAdapter);           }
+  virtual HRESULT STDMETHODCALLTYPE EnumAdapters1                 (UINT Adapter, IDXGIAdapter1 **ppAdapter)           override { return pReal->EnumAdapters1           (Adapter, ppAdapter);          }
+  virtual BOOL    STDMETHODCALLTYPE IsCurrent                     (void)                                              override { return pReal->IsCurrent               ();                            }
+  virtual BOOL    STDMETHODCALLTYPE IsWindowedStereoEnabled       (void)                                              override { return pReal->IsWindowedStereoEnabled ();                            }
+
+  virtual HRESULT STDMETHODCALLTYPE CreateSwapChainForHwnd        (IUnknown* pDevice, HWND hWnd, const DXGI_SWAP_CHAIN_DESC1* pDesc, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* pFullscreenDesc,
+                                                                   IDXGIOutput* pRestrictToOutput, IDXGISwapChain1** ppSwapChain) override
+  {
+    SK_LOG_FIRST_CALL
+
+    if (nv_present)
+    {
+      HRESULT hr =
+        pReal->CreateSwapChainForHwnd (pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
+
+      if (SUCCEEDED (hr)) {
+        const uint8_t                                                 x = 1;
+        (*ppSwapChain)->SetPrivateData (SKID_DXGI_DummySwapChain, 1, &x);
+
+        return hr;
+      }
+    }
+
+    return pReal->CreateSwapChainForHwnd (pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
+  }
+  virtual HRESULT STDMETHODCALLTYPE CreateSwapChainForCoreWindow  (IUnknown *pDevice, IUnknown *pWindow,
+                                                                   const DXGI_SWAP_CHAIN_DESC1 *pDesc,
+                                                                   IDXGIOutput *pRestrictToOutput,
+                                                                   IDXGISwapChain1 **ppSwapChain)                     override { return pReal->CreateSwapChainForCoreWindow  (pDevice, pWindow, pDesc, pRestrictToOutput,
+                                                                                                                                                                                                                 ppSwapChain); }
+  virtual HRESULT STDMETHODCALLTYPE GetSharedResourceAdapterLuid  (HANDLE hResource, LUID *pLuid)                     override { return pReal->GetSharedResourceAdapterLuid  (hResource, pLuid);                               }
+  virtual HRESULT STDMETHODCALLTYPE RegisterStereoStatusWindow    (HWND WindowHandle, UINT wMsg, DWORD *pdwCookie)    override { return pReal->RegisterStereoStatusWindow    (WindowHandle, wMsg, pdwCookie);                  }
+  virtual HRESULT STDMETHODCALLTYPE RegisterStereoStatusEvent     (HANDLE hEvent, DWORD *pdwCookie)                   override { return pReal->RegisterStereoStatusEvent     (hEvent, pdwCookie);                              }
+
+  virtual void    STDMETHODCALLTYPE UnregisterStereoStatus        (DWORD dwCookie)                                    override { return pReal->UnregisterStereoStatus        (dwCookie);                                       }
+  virtual HRESULT STDMETHODCALLTYPE RegisterOcclusionStatusWindow (HWND WindowHandle, UINT wMsg, DWORD *pdwCookie)    override { return pReal->RegisterOcclusionStatusWindow (WindowHandle, wMsg, pdwCookie);                  }
+  virtual HRESULT STDMETHODCALLTYPE RegisterOcclusionStatusEvent  (HANDLE hEvent, DWORD *pdwCookie)                   override { return pReal->RegisterOcclusionStatusEvent  (hEvent, pdwCookie);                              }
+
+  virtual void    STDMETHODCALLTYPE UnregisterOcclusionStatus     (DWORD dwCookie)                                    override { return pReal->UnregisterOcclusionStatus     (dwCookie);                                       }
+  virtual HRESULT STDMETHODCALLTYPE CreateSwapChainForComposition (IUnknown *pDevice, const DXGI_SWAP_CHAIN_DESC1 *pDesc,
+                                                                   IDXGIOutput *pRestrictToOutput,
+                                                                   IDXGISwapChain1 **ppSwapChain)                     override { return pReal->CreateSwapChainForComposition (pDevice, pDesc, pRestrictToOutput, ppSwapChain); }
+
+  virtual UINT    STDMETHODCALLTYPE GetCreationFlags              (void)                                              override { return pReal->GetCreationFlags ();                                                            }
+
+  virtual HRESULT STDMETHODCALLTYPE EnumAdapterByLuid             (LUID AdapterLuid, REFIID riid, void **ppvAdapter)  override { return pReal->EnumAdapterByLuid (AdapterLuid, riid, ppvAdapter);                              }
+  virtual HRESULT STDMETHODCALLTYPE EnumWarpAdapter               (REFIID riid, void **ppvAdapter)                    override { return pReal->EnumWarpAdapter (riid, ppvAdapter);                                             }
+
+  virtual HRESULT STDMETHODCALLTYPE CheckFeatureSupport           (DXGI_FEATURE Feature, void *pFeatureSupportData,
+                                                                   UINT FeatureSupportDataSize)                       override { return pReal->CheckFeatureSupport (Feature, pFeatureSupportData, FeatureSupportDataSize);     }
+
+  virtual HRESULT STDMETHODCALLTYPE EnumAdapterByGpuPreference    (UINT Adapter, DXGI_GPU_PREFERENCE GpuPreference,
+                                                                   REFIID riid, void **ppvAdapter)                    override { return pReal->EnumAdapterByGpuPreference (Adapter, GpuPreference, riid, ppvAdapter);          }
+
+  virtual HRESULT STDMETHODCALLTYPE RegisterAdaptersChangedEvent  (HANDLE hEvent, DWORD *pdwCookie)                   override { return pReal->RegisterAdaptersChangedEvent (hEvent, pdwCookie);                               }
+  virtual HRESULT STDMETHODCALLTYPE UnregisterAdaptersChangedEvent(DWORD dwCookie)                                    override { return pReal->UnregisterAdaptersChangedEvent (dwCookie);                                      }
+
+protected:
+  IDXGIFactory7* pReal   = nullptr;
+  int            version = 0;
+  bool           nv_present = false;
+};
 
 HRESULT
 WINAPI CreateDXGIFactory2 (UINT     Flags,
@@ -8759,6 +8879,46 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
     WaitForInitDXGI ();
   }
 
+
+  if (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"NvPresent64.dll",
+                                                  L"NvPresent.dll")))
+  {
+    SK_RunOnce (
+      SK_ImGui_WarningWithTitle (
+        L"Smooth Motion is unreliable with the current version of Special K",
+        L"NVIDIA Smooth Motion Detected"
+      );
+    );
+
+    if (SK_IsModuleInCallstack (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"NvPresent64.dll",
+                                                                            L"NvPresent.dll"))))
+    {
+      if (IsEqualGUID (riid_, IID_IDXGIFactory2))
+      {
+        SK_ReleaseAssert (IsEqualGUID (riid_, IID_IDXGIFactory2));
+
+        IDXGIFactory2 *pFactory2 = nullptr;
+
+        HRESULT hr =
+          CreateDXGIFactory2_Import (Flags, riid_, (void **)&pFactory2);
+
+        if (SUCCEEDED (hr) && pFactory2 != nullptr)
+        {
+          *ppFactory =
+            new SK_NV_SmoothMotionFactory2 (pFactory2, true);
+        }
+
+        else
+        {
+          *ppFactory = pFactory2;
+        }
+
+        return hr;
+      }
+    }
+  }
+
+
   void* pFactory_ = nullptr;
 
   HRESULT ret;
@@ -8797,7 +8957,7 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
 
     *ppFactory = newFactory;
 #else
-   *ppFactory = pFactory_;
+    *ppFactory = pFactory_;
 #endif
 
     SK_DXGI_LazyHookFactory ((IDXGIFactory *)*ppFactory);
@@ -9430,8 +9590,11 @@ IDXGISwapChain3_CheckColorSpaceSupport_Override (
   std::wstring caller =
     SK_GetCallerName ();
 
+  bool nvoglv_caller  = SK_IsModuleInCallstack (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"nvoglv64", L"nvoglv")));
+  bool vulkan1_caller = SK_IsModuleInCallstack (SK_GetModuleHandleW (L"vulkan-1"));
+
   // NVIDIA will fallback to a D3D11 SwapChain for interop if we tell it that a colorspace is unsupported.
-  if (config.compatibility.disable_dx12_vk_interop || StrStrIW (caller.c_str (), L"nvoglv") || StrStrIW (caller.c_str (), L"vulkan-1"))
+  if (config.compatibility.disable_dx12_vk_interop || nvoglv_caller || vulkan1_caller)
   {   config.compatibility.disable_dx12_vk_interop = true; // Set this so it will trigger even if called by something wrapping the SwapChain
     SK_ComPtr <ID3D11Device> pDevice11;
     if (FAILED (This->GetDevice (IID_ID3D11Device, (void **)&pDevice11.p)))
@@ -9823,9 +9986,9 @@ SK_DXGI_HookSwapChain (IDXGISwapChain* pProxySwapChain)
   if (ReadAcquire (&hooked) != FALSE)
     return;
 
-  const bool bHasStreamline =
-    SK_IsModuleLoaded (L"sl.interposer.dll") ||
-    SK_IsModuleLoaded (L"NvPresent64.dll");
+  const bool bHasStreamline = SK_IsModuleLoaded (L"sl.interposer.dll") ||
+       SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                              SK_IsModuleLoaded (L"NvPresent.dll"));
 
   SK_ComPtr <IDXGISwapChain> pSwapChain;
 
@@ -10038,9 +10201,9 @@ SK_DXGI_HookDevice1 (IDXGIDevice1* pProxyDevice)
   if (ReadAcquire (&hooked) != FALSE)
     return;
 
-  const bool bHasStreamline =
-    SK_IsModuleLoaded (L"sl.interposer.dll") ||
-    SK_IsModuleLoaded (L"NvPresent64.dll");
+  const bool bHasStreamline = SK_IsModuleLoaded (L"sl.interposer.dll") ||
+       SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                              SK_IsModuleLoaded (L"NvPresent.dll"));
 
   SK_ComPtr <IDXGIDevice1> pDevice;
 
@@ -10196,9 +10359,9 @@ SK_DXGI_HookFactory (IDXGIFactory* pProxyFactory)
 
   SK_GetDXGIFactoryInterfaceVer (pProxyFactory);
 
-  const bool bHasStreamline =
-    SK_IsModuleLoaded (L"sl.interposer.dll") ||
-    SK_IsModuleLoaded (L"NvPresent64.dll");
+  const bool bHasStreamline = SK_IsModuleLoaded (L"sl.interposer.dll") ||
+       SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                              SK_IsModuleLoaded (L"NvPresent.dll"));
 
   SK_ComPtr <IDXGIFactory> pFactory;
 
@@ -10539,7 +10702,9 @@ HookDXGI (LPVOID user)
 
 
     bool    bHookSuccess   = false;
-    bool    bHasStreamline = SK_IsModuleLoaded (L"sl.interposer.dll") || SK_IsModuleLoaded (L"NvPresent64.dll");
+    bool    bHasStreamline = SK_IsModuleLoaded (L"sl.interposer.dll") ||
+      SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                             SK_IsModuleLoaded (L"NvPresent.dll"));
     HRESULT hr             = E_NOTIMPL;
 
     SK_ComPtr <IDXGIAdapter>
@@ -10626,7 +10791,8 @@ HookDXGI (LPVOID user)
 
     // Probably better named Nixxes mode, what a pain :(
     const bool bStreamlineMode =
-      config.compatibility.init_sync_for_streamline;
+      config.compatibility.init_sync_for_streamline || SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                                                                              SK_IsModuleLoaded (L"NvPresent.dll"));
 
     const bool bReShadeMode =
       (config.compatibility.reshade_mode && (! config.compatibility.using_wine));
@@ -10651,8 +10817,9 @@ HookDXGI (LPVOID user)
 
       //// Favor this codepath because it bypasses many things like ReShade, but
       ////   it's necessary to skip this path if NVIDIA's Vk/DXGI interop layer is active
-      if (D3D11CoreCreateDevice != nullptr && (! ( SK_IsModuleLoaded (L"vulkan-1.dll") ||
-                                                  (SK_IsModuleLoaded (L"OpenGL32.dll") && !SK_IsModuleLoaded ((L"EOSOVH-Win64-Shipping.dll"))))))
+      if (D3D11CoreCreateDevice != nullptr && ((! ( SK_IsModuleLoaded (L"vulkan-1.dll") ||
+                                                   (SK_IsModuleLoaded (L"OpenGL32.dll") && !SK_IsModuleLoaded ((L"EOSOVH-Win64-Shipping.dll"))))) || SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                                                                                                                                                                            SK_IsModuleLoaded (L"NvPresent.dll"))))
       {
         hr =
           D3D11CoreCreateDevice (
@@ -10666,7 +10833,7 @@ HookDXGI (LPVOID user)
                         &pDevice.p,
                           &featureLevel );
       }
-      
+
       else
       {
         hr =
@@ -10682,7 +10849,7 @@ HookDXGI (LPVOID user)
                             &featureLevel,
                               nullptr );
       }
-      
+
       if (SUCCEEDED (hr))
       {
         if (pDevice != nullptr)
@@ -11785,7 +11952,8 @@ SK_DXGI_QuickHook (void)
       __SK_DisableQuickHook = TRUE;
     }
 
-    if ( SK_IsModuleLoaded (L"sl.interposer.dll") || SK_IsModuleLoaded (L"NvPresent64.dll") )
+    if ( SK_IsModuleLoaded (L"sl.interposer.dll") ||  SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                                                                             SK_IsModuleLoaded (L"NvPresent.dll")) )
     {
       SK_LOGi0 (L" # DXGI QuickHook disabled because an NVIDIA Streamline Interposer is present...");
 

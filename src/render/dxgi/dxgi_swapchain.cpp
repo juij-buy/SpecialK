@@ -1009,29 +1009,6 @@ IWrapDXGISwapChain::ResizeBuffers ( UINT        BufferCount,
                                     UINT        Width,     UINT Height,
                                     DXGI_FORMAT NewFormat, UINT SwapChainFlags )
 {
-  static HMODULE hModNvPresent =
-    SK_RunLHIfBitness (64, SK_GetModuleHandleW (L"NvPresent64.dll"),
-                           SK_GetModuleHandleW (L"NvPresent.dll"));
-
-  bool bCalledFromNvPresent = hModNvPresent != 0 &&
-      SK_IsModuleInCallstack (hModNvPresent);
-
-  if (bCalledFromNvPresent)
-  {
-    SK_D3D12_ResetBufferIndexToZero (pReal);
-
-    SK_RunOnce (
-      SK_ImGui_WarningWithTitle (
-        L"Smooth Motion is Unreliable with Special K (and a lot of other stuff)",
-        L"Please consider turning off NVIDIA Smooth Motion"
-      );
-    );
-
-    SK_LOGi0 (L" >> Skipping ResizeBuffers (...) call because Smooth Motion leaks backbuffers.");
-
-    return S_OK;
-  }
-
   if (SK_DXGI_ZeroCopy == -1)
       SK_DXGI_ZeroCopy = (__SK_HDR_16BitSwap || __SK_HDR_10BitSwap);
 
@@ -2620,12 +2597,6 @@ SK_DXGI_SwapChain_ResizeBuffers_Impl (
 
   else
     skippable = false;
-
-  if (SK_NvAPI_IsSmoothingMotion ())
-  {
-    SK_LOGi0 (L" >> Skipping call because Smooth Motion leaks backbuffers.");
-    skippable = true;
-  }
 
   HRESULT ret = S_OK;
 
