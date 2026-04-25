@@ -4248,7 +4248,7 @@ SK_ImGui_User_NewFrame (void)
 
   if (game_window.mouse.inside)
   {
-    const HWND
+    HWND
       hWndMouse0 =
          hWndDevice != 0 && IsWindow (hWndDevice) ? hWndDevice : nullptr,
       hWndMouse1 =
@@ -4256,6 +4256,21 @@ SK_ImGui_User_NewFrame (void)
                         GetTopWindow (hWndFocus) == hWndDevice            ?
                                       hWndFocus   : hWndGame != hWndFocus ?
                                                     hWndGame              : nullptr;
+
+    static const bool bNeedSmoothMotionInputRedirection =
+      SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                             SK_IsModuleLoaded (L"NvPresent.dll"));
+
+    // Smooth Motion creates an invisible window that we need to draw into,
+    //   but that invisible window is not the same size as the visible one,
+    //     and mouse input processing should ignore it.
+    if (bNeedSmoothMotionInputRedirection)
+    {
+      game_window.child = 0;
+
+      hWndMouse0 = hWndDevice;
+      hWndMouse1 = hWndFocus;
+    }
 
     static POINT last_cursor_pos;
     static bool  last_fg_or_top;
