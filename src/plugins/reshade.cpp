@@ -1520,14 +1520,18 @@ SK_ReShadeAddOn_Init (HMODULE reshade_module)
       bool bSmoothMotion =
         SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
                                SK_IsModuleLoaded (L"NvPresent.dll"));
-      if (! bSmoothMotion){
-        reshade::register_event <reshade::addon_event::init_effect_runtime>    (SK_ReShadeAddOn_InitRuntime);
-        reshade::register_event <reshade::addon_event::destroy_effect_runtime> (SK_ReShadeAddOn_DestroyRuntime);
-      }
 
-      else
+      if (config.reshade.allow_runtime_tracking)
       {
-        SK_LOGs0 (L"ReShadeExt", L"NVIDIA Smooth Motion Detected, Init/Destroy Runtime Events Disabled");
+        if (! bSmoothMotion){
+          reshade::register_event <reshade::addon_event::init_effect_runtime>    (SK_ReShadeAddOn_InitRuntime);
+          reshade::register_event <reshade::addon_event::destroy_effect_runtime> (SK_ReShadeAddOn_DestroyRuntime);
+        }
+
+        else
+        {
+          SK_LOGs0 (L"ReShadeExt", L"NVIDIA Smooth Motion Detected, Init/Destroy Runtime Events Disabled");
+        }
       }
 
       reshade::register_event <reshade::addon_event::destroy_device>         (SK_ReShadeAddOn_DestroyDevice);

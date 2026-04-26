@@ -5,6 +5,8 @@
    * GlobalInjectionDelay is generally unnecessary now in D3D11, but may
        still be needed in D3D12 games.
    * Reflex is not supported in D3D11 games when Smooth Motion is active.
+   * ReShade AddOns may cause problems with Smooth Motion, consider adding
+       AllowRuntimeTracking=false to [ReShade.System].
 
 26.4.24.2
 =========

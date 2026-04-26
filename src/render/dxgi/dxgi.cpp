@@ -8911,9 +8911,10 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
   {
     SK_RunOnce (
       SK_ImGui_WarningWithTitle (
-        SK_ReShade_GetDLL () ?
+        SK_ReShade_IsLocalDLLPresent () && config.reshade.allow_runtime_tracking &&
+                                          !config.reshade.allow_unsafe_addons     ?
           L"Smooth Motion support is experimental in the current version of Special K\n\n"
-            L"You may need to add 'DisabledAddons=Special K' to the ADDON section of ReShade's INI" :
+            L"You may need to set AllowRuntimeTracking=false in [ReShade.System]" :
           L"Smooth Motion support is experimental in the current version of Special K",
         L"NVIDIA Smooth Motion Detected"
       );

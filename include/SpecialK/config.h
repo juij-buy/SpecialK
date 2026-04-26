@@ -570,6 +570,7 @@ struct sk_config_t
     bool        has_local_ini         = false;  // Using local ReShade.ini instead of SK's
     bool        allow_unsafe_addons   = false;
     bool        allow_addon_with_reno = true;   // Deprecated
+    bool        allow_runtime_tracking= true;   // Required for the draw_first setting to work
     SK_ConfigSerializedKeybind
                 toggle_overlay_keybind= {
                     SK_Keybind {
