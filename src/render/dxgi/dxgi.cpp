@@ -8911,7 +8911,10 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
   {
     SK_RunOnce (
       SK_ImGui_WarningWithTitle (
-        L"Smooth Motion support is experimental in the current version of Special K",
+        SK_ReShade_GetDLL () ?
+          L"Smooth Motion support is experimental in the current version of Special K\n\n"
+            L"You may need to add 'DisabledAddons=Special K' to the ADDON section of ReShade's INI" :
+          L"Smooth Motion support is experimental in the current version of Special K",
         L"NVIDIA Smooth Motion Detected"
       );
     );
