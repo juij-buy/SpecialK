@@ -244,6 +244,13 @@ SK_ReShadeAddOn_InitRuntime (reshade::api::effect_runtime *runtime)
   if (ReadAcquire (&__SK_DLL_Ending) || runtime == nullptr)
     return;
 
+  bool bSmoothMotion =
+    SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                           SK_IsModuleLoaded (L"NvPresent.dll"));
+  if (bSmoothMotion){
+    SK_LOGs0 (L"ReShadeExt", L"NVIDIA Smooth Motion Detected, ReShade May Crash");
+  }
+
   static SK_Thread_HybridSpinlock                   _init_lock;
   std::scoped_lock <SK_Thread_HybridSpinlock> lock (_init_lock);
 
@@ -1516,6 +1523,11 @@ SK_ReShadeAddOn_Init (HMODULE reshade_module)
       if (! bSmoothMotion){
         reshade::register_event <reshade::addon_event::init_effect_runtime>    (SK_ReShadeAddOn_InitRuntime);
         reshade::register_event <reshade::addon_event::destroy_effect_runtime> (SK_ReShadeAddOn_DestroyRuntime);
+      }
+
+      else
+      {
+        SK_LOGs0 (L"ReShadeExt", L"NVIDIA Smooth Motion Detected, Init/Destroy Runtime Events Disabled");
       }
 
       reshade::register_event <reshade::addon_event::destroy_device>         (SK_ReShadeAddOn_DestroyDevice);
