@@ -1,4 +1,12 @@
-﻿26.4.24.2
+﻿26.4.25
+=======
+ + Improved support for NVIDIA Smooth Motion in D3D11 games.
+
+   * GlobalInjectionDelay is generally unnecessary now in D3D11, but may
+       still be needed in D3D12 games.
+   * Reflex is not supported in D3D11 games when Smooth Motion is active.
+
+26.4.24.2
 =========
  + Accidentally left SwapChain resize functions nop'd out (!!)
 

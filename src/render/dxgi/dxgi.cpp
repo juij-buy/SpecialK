@@ -6066,8 +6066,16 @@ SK_DXGI_CreateSwapChain_PostInit (
                                  pDesc->BufferDesc.Height == 1 ) &&
           wcscmp (wszClass, L"ScimitarEngineWindowClass") == 0 ); // Ubisoft's crap
 
+  if (SK_RunLHIfBitness (64, SK_IsModuleLoaded (L"NvPresent64.dll"),
+                             SK_IsModuleLoaded (L"NvPresent.dll")))
+  {
+    // Fixes Kingdom Come: Deliverance support, but breaks almost everything else.
+    //dummy_window |=
+    //  (_wcsicmp (wszClass, L"InvisibleWindowClassNvPresent") == 0);
+  }
+
   if (! dummy_window)
-  {  
+  {
     HWND hWndDevice = pDesc->OutputWindow;
     HWND hWndRoot   = GetAncestor (hWndDevice, GA_ROOTOWNER);
 
@@ -8659,6 +8667,8 @@ WINAPI CreateDXGIFactory1 (REFIID   riid,
   return hr;
 }
 
+bool enable_hook_factory_for_nv_present = false;
+
 thread_local bool initializing_dxgi = false;
 
 class SK_NV_SmoothMotionFactory2 : public IDXGIFactory7
@@ -8901,7 +8911,7 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
   {
     SK_RunOnce (
       SK_ImGui_WarningWithTitle (
-        L"Smooth Motion is unreliable with the current version of Special K",
+        L"Smooth Motion support is experimental in the current version of Special K",
         L"NVIDIA Smooth Motion Detected"
       );
     );
@@ -8909,7 +8919,7 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
     if (SK_IsModuleInCallstack (SK_GetModuleHandleW (SK_RunLHIfBitness (64, L"NvPresent64.dll",
                                                                             L"NvPresent.dll"))))
     {
-#if 1
+#if 0
       if (IsEqualGUID (riid_, IID_IDXGIFactory2))
       {
         SK_ReleaseAssert (IsEqualGUID (riid_, IID_IDXGIFactory2));
@@ -8977,7 +8987,7 @@ WINAPI CreateDXGIFactory2 (UINT     Flags,
 #else
     SK_DXGI_LazyHookFactory ((IDXGIFactory *)pFactory_);
 
-  //*ppFactory = new SK_NV_SmoothMotionFactory2 ((IDXGIFactory *)pFactory_);
+    //*ppFactory = new SK_NV_SmoothMotionFactory2 ((IDXGIFactory *)pFactory_);
     *ppFactory = pFactory_;
 #endif
 
