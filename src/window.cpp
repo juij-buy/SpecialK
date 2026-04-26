@@ -7377,7 +7377,7 @@ SK_Win32_IsDummyWindowClass (WNDCLASSEXW* pWindowClass)
     (!_wcsicmp (pWindowClass->lpszClassName, L"TestDX11WindowClass"))                   || // X-Ray Oxygen
     (!_wcsicmp (pWindowClass->lpszClassName, L"static"))                                || // AMD's stupid OpenGL interop
     (!_wcsicmp (pWindowClass->lpszClassName, L"SKIV_NotificationIcon"))                 || // SKIV's thingy...
-    (!_wcsicmp (pWindowClass->lpszClassName, L"InvisibleWindowClassNvPresent"))         || // NVIDIA SmoothMotion
+  //(!_wcsicmp (pWindowClass->lpszClassName, L"InvisibleWindowClassNvPresent"))         || // NVIDIA SmoothMotion
     (!_wcsicmp (pWindowClass->lpszClassName, L"TempDirect3D11OverlayWindow"))           || // Steam version of Titan Quest
     (!_wcsicmp (pWindowClass->lpszClassName, L"TempWindowClass"))                       || // Some kind of snake oil app called smart game booster
 
