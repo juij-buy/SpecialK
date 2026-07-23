@@ -249,7 +249,7 @@ static constexpr constexpr_module_s::list_type __blacklist = {
   L"dockmod64.exe",
 
   L"waittitleproject.exe",
-  L"BsSndRpt64.exe", // Some kind of crash handler
+  L"bssndrpt64.exe", // Some kind of crash handler
 
   L"crashpad_handler.exe",
   L"crashpad_handler.dll", // WTF? Dave the Diver runs this DLL as an exe
@@ -324,5 +324,8 @@ static constexpr constexpr_module_s::list_type __blacklist = {
   L"skiv.exe",
 
   // DLSS OTA updates
-  L"ngx_update.exe"
+  L"ngx_update.exe",
+
+  // Original Xbox Emulator (Microsoft Store) ... menu?
+  L"emumenu.exe"
 };
